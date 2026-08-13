@@ -1,13 +1,6 @@
 """
 Multi-Disease Prediction System
 =================================
-A B.Tech final-year project: predicts Diabetes, Heart Disease, and
-Parkinson's Disease from tabular clinical/voice measurements using
-trained scikit-learn models, plus an exploratory data-analysis
-dashboard and a model-performance comparison page.
-
-Run with:
-    streamlit run app.py
 """
 import json
 import pickle
@@ -489,12 +482,12 @@ elif page == "📈 Model Performance":
     col1, col2 = st.columns(2)
     with col1:
         fig = px.bar(results_df, x="Model", y="test_accuracy", color="Model",
-                     title="Test Accuracy by Model", text_auto=".3f")
+                     title="Test Accuracy by Model", text_auto=True)
         fig.update_layout(height=400, showlegend=False, yaxis_range=[0, 1])
         st.plotly_chart(fig, use_container_width=True)
     with col2:
         fig = px.bar(results_df, x="Model", y="f1_score", color="Model",
-                     title="F1 Score by Model", text_auto=".3f")
+                     title="F1 Score by Model", text_auto=True)
         fig.update_layout(height=400, showlegend=False, yaxis_range=[0, 1])
         st.plotly_chart(fig, use_container_width=True)
 
