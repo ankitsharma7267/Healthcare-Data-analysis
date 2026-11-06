@@ -51,7 +51,7 @@ const kpis = [
   { label: "Reports generated", value: "394", delta: "+12.1%", up: true, icon: FileBarChart, tone: "amber", note: "vs. previous period" },
 ];
 
-function Sidebar({ active, onSelect, open, onClose }) {
+function Sidebar({ active, onSelect, open, onClose, user }) {
   return <><div className={`sidebar-backdrop ${open ? "show" : ""}`} onClick={onClose} />
     <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
       <div className="brand"><div className="brand-mark"><Activity size={21} strokeWidth={2.5}/></div><div><strong>healthpulse</strong><span>ANALYTICS PLATFORM</span></div></div>
@@ -60,7 +60,7 @@ function Sidebar({ active, onSelect, open, onClose }) {
       <nav>{nav.map(item => <button key={item.label} className={`nav-item ${active === item.label ? "active" : ""}`} onClick={() => { onSelect(item.label); onClose(); }}><item.icon size={18}/><span>{item.label}</span>{item.label === "AI predictions" && <i>3</i>}</button>)}</nav>
       <div className="nav-caption nav-caption-bottom">PREFERENCES</div>
       <nav>{secondary.map(item => <button key={item.label} className={`nav-item ${active === item.label ? "active" : ""}`} onClick={() => { onSelect(item.label); onClose(); }}><item.icon size={18}/><span>{item.label}</span></button>)}</nav>
-      <div className="sidebar-bottom"><div className="support-card"><div className="support-icon"><CircleHelp size={17}/></div><b>Need a hand?</b><p>Explore the platform guide and learn how HealthPulse works.</p><button onClick={() => onSelect("Help & support")}>View help centre <ArrowUpRight size={14}/></button></div><div className="profile"><div className="avatar">AS</div><div><b>Admin Sample</b><small>Demo administrator</small></div><button aria-label="Profile menu"><ChevronDown size={16}/></button></div></div>
+      <div className="sidebar-bottom"><div className="support-card"><div className="support-icon"><CircleHelp size={17}/></div><b>Need a hand?</b><p>Explore the platform guide and learn how HealthPulse works.</p><button onClick={() => onSelect("Help & support")}>View help centre <ArrowUpRight size={14}/></button></div><div className="profile"><div className="avatar">{user.email.slice(0,2).toUpperCase()}</div><div><b>{user.email}</b><small>{user.role} account</small></div><button aria-label="Profile menu"><ChevronDown size={16}/></button></div></div>
     </aside></>;
 }
 
@@ -121,11 +121,12 @@ export default function App() {
   const [range, setRange] = useState("Last 12 months");
   const [query, setQuery] = useState("");
   const filteredDepartments = useMemo(() => departments.filter(d => d.name.toLowerCase().includes(query.toLowerCase())), [query]);
+  const dashboardKpis = apiOverview?.kpis?.map((item, index) => ({ ...kpis[index], label: item.label, value: Number(item.value).toLocaleString(), delta: item.change, note: "illustrative sample data" })) || kpis;
 
   if (!session) return <LoginScreen onLogin={handleLogin} error={authError} busy={authBusy}/>;
 
   return <div className="app-shell">
-    <Sidebar active={active} onSelect={setActive} open={menuOpen} onClose={() => setMenuOpen(false)}/>
+    <Sidebar active={active} onSelect={setActive} open={menuOpen} onClose={() => setMenuOpen(false)} user={session}/>
     <main className="main-area">
       <header className="topbar">
         <div className="topbar-left"><button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Menu size={20}/></button><div className="breadcrumb">Workspace <span>/</span> <b>{active}</b></div></div>
@@ -134,7 +135,7 @@ export default function App() {
       <div className="page-content">
         <div className="welcome-row"><div><div className="eyebrow"><Sparkles size={14}/> HEALTHCARE INTELLIGENCE</div><h1>{active === "Overview" ? "Good morning, Admin" : active}</h1><p>Here’s what’s happening across your healthcare workspace.</p></div><div className="welcome-actions"><button className="btn-secondary"><Download size={16}/> Export report</button><button className="btn-primary"><Activity size={16}/> View analytics</button></div></div>
         <div className="demo-banner"><div className="demo-pulse"/><span><b>Demo environment</b> — All figures shown are illustrative sample data, not real patient or hospital records. API session: {session.role}.</span><span className="demo-label">SAMPLE DATA</span></div>
-        <section className="kpi-grid">{kpis.map((item, index) => <KpiCard key={item.label} item={item} index={index}/>)}</section>
+        <section className="kpi-grid">{dashboardKpis.map((item, index) => <KpiCard key={item.label} item={item} index={index}/>)}</section>
         <section className="analytics-grid">
           <motion.article className="panel trend-panel" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .25 }}>
             <div className="panel-heading"><div><h2>Patient activity</h2><p>Registration and visit trends over time</p></div><select value={range} onChange={e => setRange(e.target.value)} aria-label="Select chart time range"><option>Last 12 months</option><option>Last 6 months</option><option>Last 30 days</option></select></div>
