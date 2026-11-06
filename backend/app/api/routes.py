@@ -1,7 +1,7 @@
 from flask import jsonify
 from flask_jwt_extended import jwt_required
 from ..security import roles_required
-
+from ..models import AuditEvent
 from . import api_bp
 
 @api_bp.get("/overview")
@@ -20,3 +20,19 @@ def overview():
             {"label": "Reports generated", "value": 94, "change": "+12.1%"}
         ]
     })
+
+@api_bp.get("/admin/audit-events")
+@jwt_required()
+@roles_required("admin")
+def audit_events():
+    # Audit metadata only; never return clinical payloads or credentials.
+    events = AuditEvent.query.order_by(AuditEvent.created_at.desc()).limit(100).all()
+    return jsonify({"events": [
+        {
+            "id": event.id,
+            "actor_user_id": event.actor_user_id,
+            "event_type": event.event_type,
+            "outcome": event.outcome,
+            "created_at": event.created_at.isoformat(),
+        } for event in events
+    ]})
