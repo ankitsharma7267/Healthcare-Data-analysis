@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from .config import Config
 from .extensions import db, migrate, jwt, cors, limiter
 from .auth import auth_bp
@@ -10,6 +10,9 @@ def create_app(test_config=None):
     app.config.from_object(Config)
     if test_config:
         app.config.update(test_config)
+    if not app.config.get("TESTING") and (not app.config.get("SECRET_KEY") or not app.config.get("JWT_SECRET_KEY")):
+        raise RuntimeError("Set SECRET_KEY and JWT_SECRET_KEY in the environment before starting HealthPulse.")
+    app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -27,10 +30,24 @@ def create_app(test_config=None):
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
     app.register_blueprint(api_bp, url_prefix="/api/v1")
 
+    def request_path_is_api(response):
+        # Keep API responses containing account or analytics data out of browser caches.
+        return request.path.startswith("/api/")
+
     @jwt.token_in_blocklist_loader
     def is_token_revoked(jwt_header, jwt_payload):
         from .models import RevokedToken
         return db.session.get(RevokedToken, jwt_payload["jti"]) is not None
+
+    @app.after_request
+    def security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        if request_path_is_api(response):
+            response.headers["Cache-Control"] = "no-store"
+        return response
 
     @app.get("/api/health")
     def health():
