@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 st.set_page_config(
-    page_title="Multi-Disease Prediction System",
+    page_title="HealthPulse Analytics",
     page_icon="🩺",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -49,29 +49,32 @@ heart_df = load_dataset("data/heart_clean.csv")
 parkinsons_df = load_dataset("data/parkinsons_clean.csv")
 
 # ----------------------------------------------------------------------
-# Minimal custom CSS
+# HealthPulse design system
 # ----------------------------------------------------------------------
+from pathlib import Path
+
+with open("assets/styles.css", encoding="utf-8") as css_file:
+    st.markdown(f"<style>{css_file.read()}</style>", unsafe_allow_html=True)
+
 st.markdown("""
 <style>
-.metric-card {
-    background: #F1F5F9;
-    border-radius: 12px;
-    padding: 1.1rem 1.3rem;
-    border-left: 5px solid #2563EB;
-}
 .result-positive {
-    background: #FEF2F2;
-    border-left: 6px solid #DC2626;
-    border-radius: 10px;
-    padding: 1.2rem 1.5rem;
-    font-size: 1.05rem;
+    background: #FFF4F2;
+    border: 1px solid #F4C9C3;
+    border-left: 5px solid #C75B50;
+    border-radius: 14px;
+    padding: 1.15rem 1.3rem;
+    font-size: 1rem;
+    color: #762F2A;
 }
 .result-negative {
-    background: #F0FDF4;
-    border-left: 6px solid #16A34A;
-    border-radius: 10px;
-    padding: 1.2rem 1.5rem;
-    font-size: 1.05rem;
+    background: #EFF9F6;
+    border: 1px solid #C6E9DF;
+    border-left: 5px solid #268A72;
+    border-radius: 14px;
+    padding: 1.15rem 1.3rem;
+    font-size: 1rem;
+    color: #205E50;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -79,7 +82,8 @@ st.markdown("""
 # ----------------------------------------------------------------------
 # Sidebar navigation
 # ----------------------------------------------------------------------
-st.sidebar.title("🩺 Disease Prediction System")
+st.sidebar.markdown("## 🩺 HealthPulse")
+st.sidebar.caption("Healthcare Intelligence Platform")
 page = st.sidebar.radio(
     "Navigate",
     [
@@ -100,7 +104,9 @@ st.sidebar.caption(
 # HOME
 # ========================================================================
 if page == "🏠 Home":
-    st.title("🩺 Multi-Disease Prediction System")
+    st.markdown('<div class="hp-hero"><div class="hp-eyebrow">HEALTHCARE INTELLIGENCE PLATFORM</div><h1>HealthPulse Analytics</h1><p>Understand health data. Explore patterns. Support better-informed decisions.</p></div>', unsafe_allow_html=True)
+    st.markdown("")
+    st.subheader("Platform overview")
     st.markdown(
         "##### An ML-powered clinical decision-support tool for early "
         "detection of Diabetes, Heart Disease, and Parkinson's Disease"
@@ -154,10 +160,10 @@ if page == "🏠 Home":
 
     st.markdown("---")
     st.warning(
-        "⚠️ **Disclaimer:** This tool is built for academic and educational "
-        "purposes as part of a B.Tech final-year project. It is **not** a "
-        "certified medical diagnostic device and must not be used as a "
-        "substitute for professional medical advice, diagnosis, or treatment."
+        "⚠️ **Educational-use disclaimer:** Predictions are experimental outputs "
+        "from models trained on public datasets. They are not diagnoses, do not "
+        "represent validated individual clinical risk, and must not guide treatment. "
+        "Consult a qualified healthcare professional for medical decisions."
     )
 
 # ========================================================================
