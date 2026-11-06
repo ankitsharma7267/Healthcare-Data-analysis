@@ -73,21 +73,23 @@ function KpiCard({ item, index }) {
   </motion.article>;
 }
 
-function LoginScreen({ onLogin, error, busy }) {
+function LoginScreen({ onLogin, onRegister, error, busy }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mode, setMode] = useState("login");
   return <main className="auth-screen">
     <motion.section className="auth-card" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}>
       <div className="auth-brand"><div className="brand-mark"><Activity size={22}/></div><div><strong>healthpulse</strong><span>ANALYTICS PLATFORM</span></div></div>
       <div className="eyebrow"><ShieldCheck size={14}/> SECURE WORKSPACE ACCESS</div>
-      <h1>Welcome back</h1>
-      <p className="auth-copy">Sign in to explore your healthcare analytics workspace.</p>
-      <form onSubmit={e => { e.preventDefault(); onLogin(email, password); }}>
+      <h1>{mode === "login" ? "Welcome back" : "Create your account"}</h1>
+      <p className="auth-copy">{mode === "login" ? "Sign in to explore your healthcare analytics workspace." : "Create an analyst account to get started. Elevated roles require administrator approval."}</p>
+      <form onSubmit={e => { e.preventDefault(); mode === "login" ? onLogin(email, password) : onRegister(email, password); }}>
         <label>Email address<input type="email" autoComplete="username" required maxLength={254} value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label>
         <label>Password<input type="password" autoComplete="current-password" required minLength={12} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter your password"/></label>
         {error && <div className="auth-error" role="alert">{error}</div>}
-        <button className="btn-primary auth-submit" disabled={busy}>{busy ? "Signing in..." : "Sign in securely"} <ArrowUpRight size={16}/></button>
+        <button className="btn-primary auth-submit" disabled={busy}>{busy ? "Please wait..." : mode === "login" ? "Sign in securely" : "Create analyst account"} <ArrowUpRight size={16}/></button>
       </form>
+      <button type="button" className="auth-mode-toggle" onClick={() => setMode(mode === "login" ? "register" : "login")}>{mode === "login" ? "New to HealthPulse? Create an account" : "Already registered? Sign in"}</button>
       <div className="auth-note"><ShieldCheck size={15}/> Protected API access · Short-lived session token</div>
       <p className="auth-disclaimer">Academic demonstration only. Do not enter real patient information.</p>
     </motion.section>
@@ -113,6 +115,15 @@ export default function App() {
     } finally { setAuthBusy(false); }
   }
 
+  async function handleRegister(email, password) {
+    setAuthBusy(true); setAuthError("");
+    try {
+      await apiRequest("/auth/register", { method: "POST", body: JSON.stringify({ email, password }) });
+      setAuthError("Account created successfully. Sign in with your new credentials.");
+    } catch (err) { setAuthError(err.message || "Unable to create account."); }
+    finally { setAuthBusy(false); }
+  }
+
   async function handleLogout() {
     try { await apiRequest("/auth/logout", { method: "POST" }); } catch (_) { /* token may have expired */ }
     setAccessToken(null); setSession(null); setApiOverview(null); setActive("Overview");
@@ -123,7 +134,7 @@ export default function App() {
   const filteredDepartments = useMemo(() => departments.filter(d => d.name.toLowerCase().includes(query.toLowerCase())), [query]);
   const dashboardKpis = apiOverview?.kpis?.map((item, index) => ({ ...kpis[index], label: item.label, value: Number(item.value).toLocaleString(), delta: item.change, note: "illustrative sample data" })) || kpis;
 
-  if (!session) return <LoginScreen onLogin={handleLogin} error={authError} busy={authBusy}/>;
+  if (!session) return <LoginScreen onLogin={handleLogin} onRegister={handleRegister} error={authError} busy={authBusy}/>;
 
   return <div className="app-shell">
     <Sidebar active={active} onSelect={setActive} open={menuOpen} onClose={() => setMenuOpen(false)} user={session}/>
@@ -133,7 +144,7 @@ export default function App() {
         <div className="topbar-actions"><div className="searchbox"><Search size={16}/><input placeholder="Search anything..." aria-label="Search dashboard"/></div><button className="icon-button notification" aria-label="Notifications"><Bell size={18}/><i/></button><div className="topbar-divider"/><div className="top-user"><div className="avatar small">{session.email.slice(0,2).toUpperCase()}</div><span>{session.email}</span><button className="logout-button" onClick={handleLogout} aria-label="Sign out"><LogOut size={15}/></button></div></div>
       </header>
       <div className="page-content">
-        <div className="welcome-row"><div><div className="eyebrow"><Sparkles size={14}/> HEALTHCARE INTELLIGENCE</div><h1>{active === "Overview" ? "Good morning, Admin" : active}</h1><p>Here’s what’s happening across your healthcare workspace.</p></div><div className="welcome-actions"><button className="btn-secondary"><Download size={16}/> Export report</button><button className="btn-primary"><Activity size={16}/> View analytics</button></div></div>
+        <div className="welcome-row"><div><div className="eyebrow"><Sparkles size={14}/> HEALTHCARE INTELLIGENCE</div><h1>{active === "Overview" ? "Good morning, {session.email.split("@")[0]}" : active}</h1><p>Here’s what’s happening across your healthcare workspace.</p></div><div className="welcome-actions"><button className="btn-secondary"><Download size={16}/> Export report</button><button className="btn-primary"><Activity size={16}/> View analytics</button></div></div>
         <div className="demo-banner"><div className="demo-pulse"/><span><b>Demo environment</b> — All figures shown are illustrative sample data, not real patient or hospital records. API session: {session.role}.</span><span className="demo-label">SAMPLE DATA</span></div>
         <section className="kpi-grid">{dashboardKpis.map((item, index) => <KpiCard key={item.label} item={item} index={index}/>)}</section>
         <section className="analytics-grid">
