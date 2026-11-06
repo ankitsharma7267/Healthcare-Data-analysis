@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { apiRequest, setAccessToken } from "./api";
 import { motion } from "framer-motion";
 import {
   Activity, LayoutDashboard, Users, HeartPulse, Brain, CalendarDays,
@@ -72,23 +73,67 @@ function KpiCard({ item, index }) {
   </motion.article>;
 }
 
+function LoginScreen({ onLogin, error, busy }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  return <main className="auth-screen">
+    <motion.section className="auth-card" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}>
+      <div className="auth-brand"><div className="brand-mark"><Activity size={22}/></div><div><strong>healthpulse</strong><span>ANALYTICS PLATFORM</span></div></div>
+      <div className="eyebrow"><ShieldCheck size={14}/> SECURE WORKSPACE ACCESS</div>
+      <h1>Welcome back</h1>
+      <p className="auth-copy">Sign in to explore your healthcare analytics workspace.</p>
+      <form onSubmit={e => { e.preventDefault(); onLogin(email, password); }}>
+        <label>Email address<input type="email" autoComplete="username" required maxLength={254} value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label>
+        <label>Password<input type="password" autoComplete="current-password" required minLength={12} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter your password"/></label>
+        {error && <div className="auth-error" role="alert">{error}</div>}
+        <button className="btn-primary auth-submit" disabled={busy}>{busy ? "Signing in..." : "Sign in securely"} <ArrowUpRight size={16}/></button>
+      </form>
+      <div className="auth-note"><ShieldCheck size={15}/> Protected API access · Short-lived session token</div>
+      <p className="auth-disclaimer">Academic demonstration only. Do not enter real patient information.</p>
+    </motion.section>
+  </main>;
+}
+
 export default function App() {
   const [active, setActive] = useState("Overview");
+  const [session, setSession] = useState(null);
+  const [authError, setAuthError] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [apiOverview, setApiOverview] = useState(null);
+
+  async function handleLogin(email, password) {
+    setAuthBusy(true); setAuthError("");
+    try {
+      const result = await apiRequest("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+      setAccessToken(result.access_token);
+      const [profile, overview] = await Promise.all([apiRequest("/auth/me"), apiRequest("/overview")]);
+      setSession(profile); setApiOverview(overview);
+    } catch (err) {
+      setAccessToken(null); setAuthError(err.message || "Unable to sign in.");
+    } finally { setAuthBusy(false); }
+  }
+
+  async function handleLogout() {
+    try { await apiRequest("/auth/logout", { method: "POST" }); } catch (_) { /* token may have expired */ }
+    setAccessToken(null); setSession(null); setApiOverview(null); setActive("Overview");
+  }
   const [menuOpen, setMenuOpen] = useState(false);
   const [range, setRange] = useState("Last 12 months");
   const [query, setQuery] = useState("");
   const filteredDepartments = useMemo(() => departments.filter(d => d.name.toLowerCase().includes(query.toLowerCase())), [query]);
+
+  if (!session) return <LoginScreen onLogin={handleLogin} error={authError} busy={authBusy}/>;
 
   return <div className="app-shell">
     <Sidebar active={active} onSelect={setActive} open={menuOpen} onClose={() => setMenuOpen(false)}/>
     <main className="main-area">
       <header className="topbar">
         <div className="topbar-left"><button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Menu size={20}/></button><div className="breadcrumb">Workspace <span>/</span> <b>{active}</b></div></div>
-        <div className="topbar-actions"><div className="searchbox"><Search size={16}/><input placeholder="Search anything..." aria-label="Search dashboard"/></div><button className="icon-button notification" aria-label="Notifications"><Bell size={18}/><i/></button><div className="topbar-divider"/><div className="top-user"><div className="avatar small">AS</div><span>Admin Sample</span><ChevronDown size={15}/></div></div>
+        <div className="topbar-actions"><div className="searchbox"><Search size={16}/><input placeholder="Search anything..." aria-label="Search dashboard"/></div><button className="icon-button notification" aria-label="Notifications"><Bell size={18}/><i/></button><div className="topbar-divider"/><div className="top-user"><div className="avatar small">{session.email.slice(0,2).toUpperCase()}</div><span>{session.email}</span><button className="logout-button" onClick={handleLogout} aria-label="Sign out"><LogOut size={15}/></button></div></div>
       </header>
       <div className="page-content">
         <div className="welcome-row"><div><div className="eyebrow"><Sparkles size={14}/> HEALTHCARE INTELLIGENCE</div><h1>{active === "Overview" ? "Good morning, Admin" : active}</h1><p>Here’s what’s happening across your healthcare workspace.</p></div><div className="welcome-actions"><button className="btn-secondary"><Download size={16}/> Export report</button><button className="btn-primary"><Activity size={16}/> View analytics</button></div></div>
-        <div className="demo-banner"><div className="demo-pulse"/><span><b>Demo environment</b> — All figures shown are illustrative sample data, not real patient or hospital records.</span><span className="demo-label">SAMPLE DATA</span></div>
+        <div className="demo-banner"><div className="demo-pulse"/><span><b>Demo environment</b> — All figures shown are illustrative sample data, not real patient or hospital records. API session: {session.role}.</span><span className="demo-label">SAMPLE DATA</span></div>
         <section className="kpi-grid">{kpis.map((item, index) => <KpiCard key={item.label} item={item} index={index}/>)}</section>
         <section className="analytics-grid">
           <motion.article className="panel trend-panel" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .25 }}>
