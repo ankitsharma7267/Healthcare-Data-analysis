@@ -1,43 +1,56 @@
-# Security Plan — HealthPulse Analytics
+# HealthPulse Analytics — Security Notes
 
-## Current implementation status
+## Implemented in the current React + Flask foundation
 
-This repository is an academic Streamlit machine-learning demonstration. The current application must not be used with identifiable patient records or as a clinical decision system.
+- Passwords are hashed with Argon2id; plaintext passwords are never stored.
+- Public account registration always assigns the least-privileged `analyst` role. It cannot grant admin or clinician access.
+- JWT bearer access tokens expire after 15 minutes by default and are held in React memory rather than localStorage.
+- Logout revokes the current token identifier in the database.
+- Protected role-gated endpoints read the user's current role and active status from the database on each request.
+- Login and registration endpoints have rate limits.
+- CORS is restricted to the configured frontend origin(s).
+- API responses receive `Cache-Control: no-store`; baseline browser security headers are set.
+- Audit metadata records account registration, successful and failed login, and logout. It deliberately excludes passwords, tokens, and clinical payloads.
+- An admin-only audit-events endpoint is available. Role promotion is restricted to a trusted server shell command.
+- Backend tests cover registration, password hashing, login, authenticated requests, logout/revocation, public role-escalation prevention, and analyst denial on the admin audit endpoint.
 
-The initial HealthPulse redesign branch introduces a visual design system and clarifies that model outputs are educational estimates. It does **not** yet implement production authentication, authorization, or compliance controls.
+## Important limitations
 
-## Required controls before handling personal data
+This is an academic security baseline, not a production security certification. The current app uses sample dashboard data and has no live patient records or patient-management API. Do not enter or upload identifiable patient or health information.
 
-- Authentication with password hashing (Argon2id or scrypt; never plaintext).
-- Server-side role and permission checks on every protected operation.
-- Short-lived sessions, secure cookies where supported, logout invalidation, and CSRF protection for state-changing requests.
-- Least-privilege database credentials and parameterized SQL.
-- Input validation, output encoding, upload restrictions, and safe error handling.
-- Audit events for sign-in, access to sensitive records, exports, and administrative changes. Never log passwords, tokens, or clinical values.
-- Encryption in transit (TLS) and appropriate encryption at rest with managed keys.
-- Secrets supplied through environment/secret management, never committed to Git.
-- Backups with restore testing, retention limits, and access controls.
-- Data minimization, purpose limitation, retention/deletion workflows, and anonymization or aggregation for analytics.
-- Dependency scanning, security testing, and incident response procedures.
+The frontend keeps the access token in memory. A page refresh or token expiry requires signing in again; a production refresh-token/session design still needs threat modelling and review. The default rate-limit storage is in-memory and is not suitable for multiple production workers. Use a shared Redis-backed store in a deployed environment.
+
+## Required before real users or health data
+
+- Serve only over HTTPS; configure HSTS at the trusted TLS-terminating edge.
+- Use managed secrets and rotate credentials; never commit `.env` files.
+- Use PostgreSQL migrations, least-privilege database accounts, encrypted backups, and tested restore procedures.
+- Add MFA, verified account recovery, administrator lifecycle controls, and a reviewed token renewal/revocation strategy.
+- Add a strict Content Security Policy, dependency scanning, frontend XSS review, secure file-upload controls if uploads are introduced, and security monitoring.
+- Test object-level authorization for every patient, appointment, report, export, and model-history resource before those resources exist.
+- Establish audit retention, access review, incident response, deletion/retention workflows, privacy notices, and a privacy impact assessment.
+- Complete jurisdiction-specific legal, contractual, privacy, and healthcare regulatory review.
+
+## Role model
+
+| Role | Intended future permissions |
+|---|---|
+| Admin | User administration and audited configuration access |
+| Clinician | Only assigned/authorized patient records |
+| Analyst | Aggregated or de-identified analytics |
+| Reception | Minimum registration and appointment fields required for work |
+
+Role names do not themselves establish permission boundaries; every API operation must enforce server-side authorization and, where relevant, record-level access.
 
 ## Machine-learning safety
 
-- Treat model artifacts as trusted build outputs only. Do not load user-supplied pickle/joblib files.
-- Fit preprocessing inside cross-validation pipelines to avoid data leakage.
-- Evaluate class-specific precision, recall, F1, ROC-AUC, calibration, and confidence intervals; do not report accuracy alone.
-- Keep a held-out test set untouched until final evaluation.
-- Display dataset provenance, limitations, and the fact that model probability is not an individual's clinical risk.
-- A qualified clinical and regulatory review is required before any real-world clinical use.
+- Only load trusted model artifacts created by the project build pipeline; never load user-supplied pickle/joblib files.
+- Fit preprocessing inside each cross-validation fold to avoid data leakage.
+- Evaluate class-specific precision, recall, F1, ROC-AUC, calibration, uncertainty, and confidence intervals, not accuracy alone.
+- Preserve a held-out test set for final evaluation.
+- Model probabilities are not a person's clinical risk and must not be presented as diagnoses or treatment guidance.
+- Clinical validation and regulatory review are required before any real-world clinical use.
 
-## Role model proposal
+## Compliance
 
-| Role | Intended access |
-|---|---|
-| Administrator | User and configuration management; audited administrative access |
-| Clinician | Only assigned/authorized patient records |
-| Analyst | Aggregated or de-identified datasets |
-| Reception | Appointment and registration fields needed for the task |
-
-## Compliance note
-
-A checklist or academic prototype does not establish legal compliance. Any deployment processing personal or health data requires a jurisdiction-specific privacy, security, contractual, and legal assessment, including applicable Indian data-protection requirements.
+A prototype checklist does not establish legal compliance. Any deployment processing personal or health data requires a jurisdiction-specific privacy, security, contractual, and legal assessment, including applicable Indian data-protection requirements.
