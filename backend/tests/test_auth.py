@@ -54,3 +54,16 @@ def test_short_password_is_rejected(client):
         "email": "short@example.com", "password": "tiny"
     })
     assert response.status_code == 400
+
+def test_analyst_cannot_read_admin_audit_events(client):
+    client.post("/api/v1/auth/register", json={
+        "email": "analyst@example.com", "password": "a-long-test-password-123"
+    })
+    login = client.post("/api/v1/auth/login", json={
+        "email": "analyst@example.com", "password": "a-long-test-password-123"
+    })
+    token = login.json["access_token"]
+    response = client.get("/api/v1/admin/audit-events", headers={
+        "Authorization": f"Bearer {token}"
+    })
+    assert response.status_code == 403
