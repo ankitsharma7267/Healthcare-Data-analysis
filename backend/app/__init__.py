@@ -1,5 +1,8 @@
 import os
 import click
+from dotenv import load_dotenv
+
+load_dotenv()
 from flask import Flask, jsonify, request
 from .config import Config
 from .extensions import db, migrate, jwt, cors, limiter
