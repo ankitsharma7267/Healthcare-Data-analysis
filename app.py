@@ -51,8 +51,6 @@ parkinsons_df = load_dataset("data/parkinsons_clean.csv")
 # ----------------------------------------------------------------------
 # HealthPulse design system
 # ----------------------------------------------------------------------
-from pathlib import Path
-
 with open("assets/styles.css", encoding="utf-8") as css_file:
     st.markdown(f"<style>{css_file.read()}</style>", unsafe_allow_html=True)
 
@@ -200,13 +198,13 @@ elif page == "🍬 Diabetes Prediction":
 
         st.markdown("### Result")
         if pred == 1:
-            st.markdown(f'<div class="result-positive">⚠️ <b>The model predicts a HIGH likelihood of diabetes.</b>'
-                         f'{f" (confidence: {proba*100:.1f}%)" if proba is not None else ""}<br>'
+            st.markdown(f'<div class="result-positive">⚠️ <b>The model output is in the higher-score class for this dataset.</b>'
+                         f'{f" (model-estimated probability: {proba*100:.1f}%)" if proba is not None else ""}<br>'
                          f'Please consult a healthcare professional for proper diagnosis and testing.</div>',
                          unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="result-negative">✅ <b>The model predicts a LOW likelihood of diabetes.</b>'
-                         f'{f" (confidence: {(1-proba)*100:.1f}%)" if proba is not None else ""}<br>'
+            st.markdown(f'<div class="result-negative">✅ <b>The model output is in the lower-score class for this dataset.</b>'
+                         f'{f" (model-estimated probability: {(1-proba)*100:.1f}%)" if proba is not None else ""}<br>'
                          f'This is not a medical diagnosis — maintain regular checkups.</div>',
                          unsafe_allow_html=True)
 
@@ -283,12 +281,12 @@ elif page == "❤️ Heart Disease Prediction":
 
         st.markdown("### Result")
         if pred == 1:
-            st.markdown(f'<div class="result-positive">⚠️ <b>The model predicts a HIGH likelihood of heart disease.</b>'
+            st.markdown(f'<div class="result-positive">⚠️ <b>The model output is in the higher-score class for this dataset.</b>'
                          f'{f" (confidence: {proba*100:.1f}%)" if proba is not None else ""}<br>'
                          f'Please consult a cardiologist for proper diagnosis.</div>',
                          unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="result-negative">✅ <b>The model predicts a LOW likelihood of heart disease.</b>'
+            st.markdown(f'<div class="result-negative">✅ <b>The model output is in the lower-score class for this dataset.</b>'
                          f'{f" (confidence: {(1-proba)*100:.1f}%)" if proba is not None else ""}<br>'
                          f'This is not a medical diagnosis — maintain regular checkups.</div>',
                          unsafe_allow_html=True)
