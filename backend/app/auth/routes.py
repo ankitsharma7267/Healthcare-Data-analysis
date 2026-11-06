@@ -10,7 +10,7 @@ from ..audit import record_event
 from . import auth_bp
 
 password_hasher = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=2)
-EMAIL_RE = re.compile(r"^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 def error(code, message, status):
     return jsonify({"error": {"code": code, "message": message}}), status
