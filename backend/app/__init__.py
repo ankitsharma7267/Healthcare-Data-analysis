@@ -1,4 +1,5 @@
 import os
+import click
 from flask import Flask, jsonify, request
 from .config import Config
 from .extensions import db, migrate, jwt, cors, limiter
@@ -48,6 +49,19 @@ def create_app(test_config=None):
         if request_path_is_api(response):
             response.headers["Cache-Control"] = "no-store"
         return response
+
+    @app.cli.command("promote-user")
+    @click.argument("email")
+    @click.option("--role", type=click.Choice(["admin", "clinician", "analyst", "reception"]), required=True)
+    def promote_user(email, role):
+        """Assign a role to an existing account from a trusted server shell."""
+        from .models import User
+        user = User.query.filter_by(email=email.strip().lower()).first()
+        if not user:
+            raise click.ClickException("User not found. Register the account first.")
+        user.role = role
+        db.session.commit()
+        click.echo(f"Updated {user.email} to role: {role}")
 
     @app.get("/api/health")
     def health():
