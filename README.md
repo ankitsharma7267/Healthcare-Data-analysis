@@ -1,125 +1,146 @@
-# 🩺 Multi-Disease Prediction System
+# HealthPulse Analytics
 
-A B.Tech final-year project that predicts **Diabetes**, **Heart Disease**, and
-**Parkinson's Disease** from tabular clinical/voice measurements using
-trained machine-learning models, wrapped in an interactive **Streamlit**
-web application with a built-in **exploratory data-analysis dashboard**
-and **model-performance comparison** page.
+**Healthcare Data Analytics & Intelligent Disease Prediction Platform**
 
----
+HealthPulse is an academic full-stack healthcare analytics project. The repository is migrating from its original Streamlit prototype to a React + Flask architecture while preserving the existing Python/scikit-learn disease-model work.
 
-## ✨ Features
+> **Safety boundary:** The current dashboard uses illustrative sample metrics and public academic datasets. It is not connected to a hospital, must not receive identifiable patient information, and is not a medical device. Model outputs are not diagnoses or validated individual clinical risk estimates.
 
-- **Three disease predictors** — Diabetes, Heart Disease, Parkinson's — each backed
-  by the best of 5 compared ML algorithms (Logistic Regression, Random Forest,
-  SVM, KNN, Decision Tree).
-- **Data Analysis Dashboard** — class distribution, feature histograms/box
-  plots, correlation heatmaps, and raw data download for each dataset.
-- **Model Performance page** — accuracy / precision / recall / F1 / ROC-AUC
-  comparison table, bar charts, and a radar chart across all 5 algorithms.
-- **Risk-score gauges** — visual confidence meter for every prediction.
-- Clean, form-based UI — no coding needed to use it.
+## Technology
 
----
+| Layer | Stack |
+|---|---|
+| Frontend | React, Vite, Framer Motion, Recharts, Lucide |
+| Backend | Python, Flask, Flask REST API |
+| Database | SQLAlchemy; SQLite for local tests, PostgreSQL for deployment |
+| Authentication | JWT bearer access tokens, Argon2id password hashing |
+| Protection | Server-side role checks, rate limits, CORS allowlist, security headers |
+| Analytics / ML | Pandas, NumPy, Scikit-learn, Plotly (legacy Streamlit prototype) |
+| Testing | Pytest; Vitest to be added with frontend tests |
 
-## 🗂️ Project Structure
+## Repository layout
 
-```
-disease_prediction/
-├── app.py                     # Main Streamlit application
-├── train_models.py            # Trains & compares models, saves best ones
-├── prepare_data.py            # Cleans raw CSVs, adds column headers
-├── requirements.txt
-├── README.md
-├── .streamlit/
-│   └── config.toml            # App theme
-├── data/
-│   ├── diabetes.csv / diabetes_clean.csv
-│   ├── heart.csv / heart_clean.csv
-│   └── parkinsons.csv / parkinsons_clean.csv
-├── models/
-│   ├── diabetes_model.pkl
-│   ├── heart_model.pkl
-│   ├── parkinsons_model.pkl
-│   └── model_metrics.json     # All algorithms' metrics, for the dashboard
-└── notebooks/
-    └── EDA_and_Model_Building.ipynb   # Full walkthrough for your report
+```text
+.
+├── app.py, train_models.py, prepare_data.py   # Original Streamlit + ML prototype
+├── data/                                       # Public academic datasets
+├── models/                                     # Existing trained model artifacts
+├── notebooks/                                  # EDA / model-building notebook
+├── backend/
+│   ├── app/
+│   │   ├── auth/                               # Registration, login, logout, profile
+│   │   ├── api/                                # Versioned API endpoints
+│   │   ├── models.py                           # User, revoked token, audit event
+│   │   ├── security.py                         # Live database role checks
+│   │   └── ...
+│   ├── tests/
+│   ├── requirements.txt
+│   └── run.py
+└── frontend/
+    ├── src/
+    │   ├── App.jsx                             # Responsive animated dashboard + sign-in
+    │   ├── api.js                              # In-memory bearer token API client
+    │   └── styles.css
+    └── package.json
 ```
 
----
+## Run locally (Windows PowerShell)
 
-## 🚀 Setup & Run
+### 1. Backend
 
-```bash
-# 1. Create a virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-
-# 2. Install dependencies
+```powershell
+cd backend
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# 3. (Only needed once, or if you change the data) Prepare data & train models
-python prepare_data.py
-python train_models.py
-
-# 4. Launch the app
-streamlit run app.py
+Copy-Item .env.example .env
 ```
 
-The app opens automatically at `http://localhost:8501`.
+Edit `.env`. Generate separate random secrets:
 
----
+```powershell
+py -c "import secrets; print(secrets.token_urlsafe(48))"
+```
 
-## 📊 Datasets Used
+Use one generated value for `SECRET_KEY` and a different value for `JWT_SECRET_KEY`. Keep `.env` private and out of Git. The default local database is SQLite; for shared or deployed environments, configure PostgreSQL in `DATABASE_URL`.
 
-| Disease | Dataset | Records | Features | Source |
-|---|---|---|---|---|
-| Diabetes | Pima Indians Diabetes | 768 | 8 | National Institute of Diabetes and Digestive and Kidney Diseases |
-| Heart Disease | UCI Cleveland Heart Disease | 303 | 13 | UCI Machine Learning Repository |
-| Parkinson's | UCI Oxford Parkinson's Voice | 195 | 22 | Max Little, University of Oxford |
+Initialize local tables and start the API:
 
----
+```powershell
+py -c "from app import create_app; from app.extensions import db; app=create_app(); ctx=app.app_context(); ctx.push(); db.create_all(); ctx.pop()"
+py run.py
+```
 
-## 🤖 Model Training Methodology
+API health check: http://127.0.0.1:5000/api/health
 
-For each disease:
-1. Data is cleaned and split **80/20** into train/test sets (stratified).
-2. Features are standardized with `StandardScaler`.
-3. **5 algorithms** are trained and evaluated with **5-fold cross-validation**
-   on the training set: Logistic Regression, Random Forest, SVM (RBF kernel),
-   K-Nearest Neighbors, Decision Tree.
-4. The algorithm with the **highest mean cross-validated accuracy** is selected
-   as the production model for that disease, then evaluated on the held-out test set.
-5. The chosen model + its scaler are pickled to `models/` for the app to load.
+### 2. Create an account and assign an administrator role
 
-Achieved test accuracies (see `models/model_metrics.json` for full detail,
-and the "Model Performance" page in the app for live comparison):
+Public registration always creates an **analyst** account; clients cannot choose privileged roles.
 
-| Disease | Best Model | Test Accuracy |
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:5000/api/v1/auth/register -ContentType "application/json" -Body '{"email":"admin@example.com","password":"Use-A-Unique-Long-Password"}'
+```
+
+Promote the account from a trusted local/server shell (requires database access):
+
+```powershell
+flask --app run.py promote-user admin@example.com --role admin
+```
+
+Then sign in through the React page. Never expose this role-change operation as a public registration option.
+
+### 3. Frontend
+
+Open a second PowerShell terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173.
+
+Optional API URL override: create `frontend/.env.local` with `VITE_API_BASE_URL=http://127.0.0.1:5000/api/v1`.
+
+## API endpoints
+
+| Method | Endpoint | Access |
 |---|---|---|
-| Diabetes | Logistic Regression | ~71–78% |
-| Heart Disease | Random Forest | ~82–84% |
-| Parkinson's | Random Forest | ~90–92% |
+| POST | `/api/v1/auth/register` | Public; analyst role only |
+| POST | `/api/v1/auth/login` | Public; rate-limited |
+| GET | `/api/v1/auth/me` | Authenticated |
+| POST | `/api/v1/auth/logout` | Authenticated; revokes current token |
+| GET | `/api/v1/overview` | Authenticated roles |
+| GET | `/api/v1/admin/audit-events` | Admin only |
+| GET | `/api/health` | Public health check |
 
-*(Exact numbers depend on the random train/test split seed; re-run
-`train_models.py` to reproduce.)*
+Bearer tokens are held in frontend memory, not localStorage. They expire after 15 minutes by default; re-authentication is required after expiry or page refresh. Logout adds the token identifier to the revocation table. Role and account status are checked against the database for protected role-gated routes.
 
----
+## Run backend tests
 
-## 🧭 Suggested Extensions (for making this distinctly your own project)
+From the `backend` directory with its virtual environment active:
 
-- Add a 4th disease (e.g., breast cancer, chronic kidney disease) using the
-  same `train_models.py` pattern.
-- Add SHAP/feature-importance explainability to each prediction.
-- Add user authentication and a database to store prediction history.
-- Deploy to Streamlit Community Cloud, Render, or a college server for your demo.
-- Expand the EDA notebook into your formal project report chapters
-  (Introduction → Literature Review → Methodology → Results → Conclusion).
+```powershell
+pytest -q
+```
 
----
+Tests cover registration, Argon2 password hashing, login, authenticated access, logout/revocation, privilege escalation prevention, and analyst denial on the admin audit endpoint.
 
-## ⚠️ Disclaimer
+## Security notes and remaining production work
 
-This project is built for **academic and educational purposes only**. It is
-**not** a certified medical device and must not be used as a substitute for
-professional medical advice, diagnosis, or treatment.
+The implemented controls are an educational baseline, not a production security certification. Before real users or health data are introduced, complete and independently review: TLS/HSTS at the deployment edge, managed secrets, PostgreSQL migrations and backups, durable shared rate-limit storage (for example Redis), token refresh/session lifecycle, account recovery and MFA, CSP and frontend XSS review, dependency scanning, authorization tests for every resource, audit retention/monitoring, incident response, privacy impact assessment, and applicable legal/compliance review. Read [SECURITY.md](SECURITY.md).
+
+## Machine-learning migration
+
+The original Streamlit prototype and trained models remain during migration. Before serving predictions from Flask, refactor preprocessing into Scikit-learn Pipelines fitted inside each cross-validation fold, verify dataset provenance and target definitions, evaluate class-specific metrics and calibration, and add model/version tracking. Do not load user-supplied pickle files.
+
+## Future scope
+
+- Patient and doctor workflows with record-level authorization
+- Disease trend analytics and cohort filters
+- Explainable AI (e.g. SHAP) and model monitoring
+- Model performance, calibration and fairness reporting
+- Secure PDF/CSV report generation
+- HL7 FHIR interoperability and ABDM integration only after appropriate approvals and conformance work
+- PostgreSQL-backed multi-tenant deployment, observability and disaster recovery
